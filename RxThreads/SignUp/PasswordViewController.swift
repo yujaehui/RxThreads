@@ -60,7 +60,7 @@ class PasswordViewController: UIViewController {
         let vaildation = passwordTextField.rx.text.orEmpty.map { $0.count >= 8 } // 8자 이상이면 true
         vaildation.bind(to: passwordStateLabel.rx.isHidden ,nextButton.rx.isEnabled).disposed(by: disposeBag) // to, 그대로 전달
         vaildation.bind(with: self) { owner, value in
-            owner.nextButton.backgroundColor = value ? .systemPink : .systemGray
+            owner.nextButton.backgroundColor = value ? .systemBlue : .systemGray
         }.disposed(by: disposeBag)
         
 

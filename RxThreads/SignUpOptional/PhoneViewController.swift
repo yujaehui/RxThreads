@@ -71,7 +71,7 @@ class PhoneViewController: UIViewController {
         }.bind(with: self) { owner, value in
             owner.nextButton.isEnabled = value.isVaild
             owner.phoneStateLabel.isHidden = value.isVaild
-            owner.nextButton.backgroundColor = value.isVaild ? .systemPink : .systemGray
+            owner.nextButton.backgroundColor = value.isVaild ? .systemBlue : .systemGray
             
             owner.phoneStateLabel.text = value.message
         }.disposed(by: disposeBag)
