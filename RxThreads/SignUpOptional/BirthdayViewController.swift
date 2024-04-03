@@ -68,13 +68,15 @@ class BirthdayViewController: UIViewController {
   
     let nextButton = PointButton(title: "가입하기")
     
-    let year = PublishSubject<Int>()
-    let month = PublishSubject<Int>()
-    let day = PublishSubject<Int>()
-    
-    let info = PublishSubject<String>()
+//    let year = PublishSubject<Int>()
+//    let month = PublishSubject<Int>()
+//    let day = PublishSubject<Int>()
+//    
+//    let info = PublishSubject<String>()
     
     let disposeBag = DisposeBag()
+    
+    let viewModel = BirthdayViewModel()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -116,31 +118,16 @@ class BirthdayViewController: UIViewController {
     }
     
     func bind() {
-        year.map { "\($0)년" }.bind(to: yearLabel.rx.text).disposed(by: disposeBag)
-        month.map { "\($0)월 "}.bind(to: monthLabel.rx.text).disposed(by: disposeBag)
-        day.map { "\($0)일 "}.bind(to: dayLabel.rx.text).disposed(by: disposeBag)
-        
-        info.bind(to: infoLabel.rx.text).disposed(by: disposeBag)
-        
-        birthDayPicker.rx.date
-            .bind(with: self) { owner, value in
-                let components = Calendar.current.dateComponents([.year, .month, .day], from: value)
-                owner.year.onNext(components.year!)
-                owner.month.onNext(components.month!)
-                owner.day.onNext(components.day!)
-                
-                let ageComponents = Calendar.current.dateComponents([.year], from: value, to: Date())
-                print(ageComponents.year!)
-                if let age = ageComponents.year, age > 17 {
-                    owner.info.onNext("만 \(age)세로 가입 가능한 나이입니다.")
-                    owner.nextButton.isEnabled = true
-                    owner.nextButton.backgroundColor = .systemBlue
-                } else {
-                    owner.info.onNext("만 17세 이상만 가입 가능합니다.")
-                    owner.nextButton.isEnabled = false
-                    owner.nextButton.backgroundColor = .systemGray
-                }
+        viewModel.outputYear.asDriver(onErrorJustReturn: "").drive(yearLabel.rx.text).disposed(by: disposeBag)
+        viewModel.outputMonth.asDriver(onErrorJustReturn: "").drive(monthLabel.rx.text).disposed(by: disposeBag)
+        viewModel.outputDay.asDriver(onErrorJustReturn: "").drive(dayLabel.rx.text).disposed(by: disposeBag)
+        viewModel.outputValidationText.asDriver(onErrorJustReturn: "").drive(infoLabel.rx.text).disposed(by: disposeBag)
+        viewModel.outputValidation.asDriver(onErrorJustReturn: false).drive(with: self) { owner, value in
+                owner.nextButton.isEnabled = value
+                owner.nextButton.backgroundColor = value ? .systemBlue : .systemGray
             }.disposed(by: disposeBag)
+        
+        birthDayPicker.rx.date.bind(to: viewModel.inputDate).disposed(by: disposeBag)
         
         nextButton.rx.tap.bind(with: self) { owner, _ in
             print("가입완료")

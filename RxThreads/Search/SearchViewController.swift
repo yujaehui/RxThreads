@@ -14,11 +14,10 @@ class SearchViewController: UIViewController {
     
     let tableView = UITableView()
     let searchBar = UISearchBar()
-    
-    var data = ["a", "b", "c", "d", "aa", "bb", "cc", "dd", "abc", "abcd"]
-    lazy var items = BehaviorSubject(value: data)
-    
+
     let disposeBag = DisposeBag()
+    
+    let viewModel = SearchViewModel()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -31,7 +30,7 @@ class SearchViewController: UIViewController {
     }
     
     func bind() {
-        items
+        viewModel.items
             .bind(to: tableView.rx.items(cellIdentifier: "Cell", cellType: SearchTableViewCell.self)) { (row, element, cell) in
                 cell.sampleImageView.backgroundColor = .systemGray
                 cell.sampleLabel.text = "TEST \(element)"
@@ -41,32 +40,15 @@ class SearchViewController: UIViewController {
                     }.disposed(by: cell.disposeBag)
             }.disposed(by: disposeBag)
         
-        Observable.zip(tableView.rx.itemSelected, tableView.rx.modelSelected(String.self))
-            .bind(with: self) { owner, value in
-                print(value)
-                owner.data.remove(at: value.0.row)
-                owner.items.onNext(owner.data)
-            }.disposed(by: disposeBag)
-        
-        searchBar.rx.text.orEmpty
-            .debounce(.seconds(1), scheduler: MainScheduler.instance)
-            .distinctUntilChanged()
-            .subscribe(with: self) { owner, value in
-                let result = value.isEmpty ? owner.data : owner.data.filter { $0.contains(value) }
-                owner.items.onNext(result)
-            }.disposed(by: disposeBag)
-        
-        searchBar.rx.searchButtonClicked
-            .withLatestFrom(searchBar.rx.text.orEmpty)
-            .distinctUntilChanged()
-            .subscribe(with: self) { owner, value in
-                let result = value.isEmpty ? owner.data : owner.data.filter { $0.contains(value) }
-                owner.items.onNext(result)
-            }.disposed(by: disposeBag)
-    }
-    
-    func setNav() {
-        navigationItem.titleView = searchBar
+        searchBar.rx.text.orEmpty.bind(to: viewModel.inputSearchText).disposed(by: disposeBag)
+        searchBar.rx.searchButtonClicked.bind(to: viewModel.inputSearchButtonClicked).disposed(by: disposeBag)
+
+//        Observable.zip(tableView.rx.itemSelected, tableView.rx.modelSelected(String.self))
+//            .bind(with: self) { owner, value in
+//                print(value)
+//                owner.data.remove(at: value.0.row)
+//                owner.items.onNext(owner.data)
+//            }.disposed(by: disposeBag)
     }
     
     func configureHierarchy() {
@@ -83,5 +65,9 @@ class SearchViewController: UIViewController {
         tableView.snp.makeConstraints { make in
             make.edges.equalTo(view.safeAreaLayoutGuide)
         }
+    }
+    
+    func setNav() {
+        navigationItem.titleView = searchBar
     }
 }

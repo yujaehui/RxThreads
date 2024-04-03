@@ -15,20 +15,16 @@ class PhoneViewController: UIViewController {
     let phoneTextField = SignTextField(placeholderText: "연락처를 입력해주세요")
     let phoneStateLabel = UILabel()
     let nextButton = PointButton(title: "다음")
-    
-    let identificationNumber = Observable.just("010")
-    let stateText = BehaviorSubject(value: "10자 이상 입력해주세요")
-    
+        
     let disposeBag = DisposeBag()
+    
+    let viewModel = PhoneViewModel()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = Color.white
         configureLayout()
         bind()
-        
-        
-        
     }
     
     func configureLayout() {
@@ -56,26 +52,16 @@ class PhoneViewController: UIViewController {
     }
     
     func bind() {
-        identificationNumber.bind(to: phoneTextField.rx.text).disposed(by: disposeBag)
-        stateText.bind(to: phoneStateLabel.rx.text).disposed(by: disposeBag)
+        viewModel.identifierNumber.asDriver().drive(phoneTextField.rx.text).disposed(by: disposeBag)
         
-        let vaildation = phoneTextField.rx.text.orEmpty
-        vaildation.map { text -> (isVaild: Bool, message: String) in
-            if Int(text) == nil {
-                return (false, "숫자만 입력해주세요")
-            } else if text.count <= 10 {
-                return (false, "11자 이상 입력해주세요")
-            }  else {
-                return (true, "")
-            }
-        }.bind(with: self) { owner, value in
-            owner.nextButton.isEnabled = value.isVaild
-            owner.phoneStateLabel.isHidden = value.isVaild
-            owner.nextButton.backgroundColor = value.isVaild ? .systemBlue : .systemGray
-            
-            owner.phoneStateLabel.text = value.message
+        viewModel.outputValidationText.asDriver(onErrorJustReturn: "").drive(phoneStateLabel.rx.text).disposed(by: disposeBag)
+        viewModel.outputValidation.asDriver(onErrorJustReturn: false).drive(with: self) { owner, value in
+            owner.phoneStateLabel.isHidden = value
+            owner.nextButton.isEnabled = value
+            owner.nextButton.backgroundColor = value ?  .systemBlue : .systemGray
         }.disposed(by: disposeBag)
         
+        phoneTextField.rx.text.orEmpty.bind(to: viewModel.inputPhoneText).disposed(by: disposeBag)
         
         nextButton.rx.tap.bind(with: self) { owner, _ in
             owner.navigationController?.pushViewController(NicknameViewController(), animated: true)
