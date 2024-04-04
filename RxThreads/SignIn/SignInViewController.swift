@@ -7,6 +7,8 @@
 
 import UIKit
 import SnapKit
+import RxSwift
+import RxCocoa
 
 class SignInViewController: UIViewController {
 
@@ -15,21 +17,36 @@ class SignInViewController: UIViewController {
     let signInButton = PointButton(title: "로그인")
     let signUpButton = UIButton()
     
+    let disposeBag = DisposeBag()
+    
+    let viewModel = SignInViewModel()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-
         view.backgroundColor = Color.white
-        
         configureLayout()
         configure()
+        bind()
+    }
+    
+    func bind() {
+        let email = emailTextField.rx.text.orEmpty
+        let password = passwordTextField.rx.text.orEmpty
+        let signIn = signInButton.rx.tap
+        let signUp = signUpButton.rx.tap
+        let input = SignInViewModel.Input(email: email, password: password, signIn: signIn, signUp: signUp)
         
-        signUpButton.addTarget(self, action: #selector(signUpButtonClicked), for: .touchUpInside)
+        let output = viewModel.transform(input: input)
+        output.email.drive(emailTextField.rx.text).disposed(by: disposeBag)
+        output.password.drive(passwordTextField.rx.text).disposed(by: disposeBag)
+        output.signIn.bind(with: self) { owner, _ in
+            print("Sign In Tapped")
+        }.disposed(by: disposeBag)
+        output.signUp.bind(with: self) { owner, _ in
+            owner.navigationController?.pushViewController(SignUpViewController(), animated: true)
+        }.disposed(by: disposeBag)
+        output.isEnabled.drive(signInButton.rx.isEnabled).disposed(by: disposeBag)
     }
-    
-    @objc func signUpButtonClicked() {
-        navigationController?.pushViewController(SignUpViewController(), animated: true)
-    }
-    
     
     func configure() {
         signUpButton.setTitle("회원이 아니십니까?", for: .normal)
@@ -66,6 +83,4 @@ class SignInViewController: UIViewController {
             make.horizontalEdges.equalTo(view.safeAreaLayoutGuide).inset(20)
         }
     }
-    
-
 }

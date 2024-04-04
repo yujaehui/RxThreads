@@ -10,6 +10,47 @@ import RxSwift
 import RxCocoa
 
 class PhoneViewModel {
+    struct Input {
+        let phone: ControlProperty<String>
+        let next: ControlEvent<Void>
+    }
+    
+    struct Output {
+        let identifierNumber = BehaviorRelay(value: "010").asDriver()
+        let phone: Driver<String>
+        let stateText: Driver<String>
+        let isEnabled: Driver<Bool>
+        let next: ControlEvent<Void>
+    }
+    
+    func transform(input: Input) -> Output {
+        let phone = input.phone.asDriver()
+        let stateText = input.phone
+            .map { value in
+                if Int(value) == nil {
+                    "숫자만 입력해주세요"
+                } else if value.count <= 10 {
+                    "11자 이상 입력해주세요"
+                }  else {
+                    ""
+                }
+            }
+            .asDriver(onErrorJustReturn: "")
+        let isEnabled = input.phone
+            .map { value in
+                if Int(value) == nil {
+                    false
+                } else if value.count <= 10 {
+                    false
+                }  else {
+                    true
+                }
+            }
+            .asDriver(onErrorJustReturn: false)
+        
+        return Output(phone: phone, stateText: stateText, isEnabled: isEnabled, next: input.next)
+    }
+    
     
     let identifierNumber = BehaviorRelay(value: "010")
     

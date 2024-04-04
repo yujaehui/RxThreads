@@ -27,6 +27,26 @@ class PasswordViewController: UIViewController {
         bind()
     }
     
+    func bind() {
+        let password = passwordTextField.rx.text.orEmpty
+        let next = nextButton.rx.tap
+        let input = PasswordViewModel.Input(password: password, next: next)
+        
+        let output = viewModel.transform(input: input)
+        output.password.drive(passwordTextField.rx.text).disposed(by: disposeBag)
+        output.stateText.drive(passwordStateLabel.rx.text).disposed(by: disposeBag)
+        
+        output.isEnabled.drive(with: self) { owner, value in
+            owner.nextButton.isEnabled = value
+            owner.nextButton.backgroundColor = value ? .systemBlue : .systemGray
+            owner.passwordStateLabel.isHidden = value
+        }.disposed(by: disposeBag)
+        
+        output.next.bind(with: self) { owner, _ in
+            owner.navigationController?.pushViewController(PhoneViewController(), animated: true)
+        }.disposed(by: disposeBag)
+    }
+    
     func configureLayout() {
         view.addSubview(passwordTextField)
         view.addSubview(passwordStateLabel)
@@ -50,20 +70,4 @@ class PasswordViewController: UIViewController {
             make.horizontalEdges.equalTo(view.safeAreaLayoutGuide).inset(20)
         }
     }
-    
-    func bind() {
-        viewModel.outputPasswordValidationText.asDriver(onErrorJustReturn: "").drive(passwordStateLabel.rx.text).disposed(by: disposeBag)
-        viewModel.outputPasswordValidation.asDriver(onErrorJustReturn: false).drive(with: self) { owner, value in
-                owner.passwordStateLabel.isHidden = value
-                owner.nextButton.isEnabled = value
-                owner.nextButton.backgroundColor = value ? .systemBlue : .systemGray
-            }.disposed(by: disposeBag)
-        
-        passwordTextField.rx.text.orEmpty.bind(to: viewModel.inputPasswordText).disposed(by: disposeBag)
-
-        nextButton.rx.tap.bind(with: self) { owner, _ in
-            owner.navigationController?.pushViewController(PhoneViewController(), animated: true)
-        }.disposed(by: disposeBag)
-    }
-    
 }

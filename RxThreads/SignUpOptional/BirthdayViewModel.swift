@@ -10,35 +10,55 @@ import RxSwift
 import RxCocoa
 
 class BirthdayViewModel {
-    
-    let inputDate = PublishSubject<Date>()
-    
-    let outputYear = PublishRelay<String>()
-    let outputMonth = PublishRelay<String>()
-    let outputDay = PublishRelay<String>()
-    let outputValidationText = PublishRelay<String>()
-    let outputValidation = PublishRelay<Bool>()
-    
-    let disposeBag = DisposeBag()
-    
-    init() {
-        inputDate
-            .bind(with: self) { owner, value in
-                let components = Calendar.current.dateComponents([.year, .month, .day], from: value)
-                owner.outputYear.accept("\(components.year!)년")
-                owner.outputMonth.accept("\(components.month!)월")
-                owner.outputDay.accept("\(components.day!)일")
-                
-                let ageComponents = Calendar.current.dateComponents([.year], from: value, to: Date())
-                if let age = ageComponents.year, age > 17 {
-                    owner.outputValidationText.accept("만 \(age)세로 가입 가능한 나이입니다.")
-                    owner.outputValidation.accept(true)
-                } else {
-                    owner.outputValidationText.accept("만 17세 이상만 가입 가능합니다.")
-                    owner.outputValidation.accept(false)
-                }
-            }.disposed(by: disposeBag)
-        
+    struct Input {
+        let birthday: ControlProperty<Date>
+        let next: ControlEvent<Void>
     }
     
+    struct Output {
+        let year: Driver<String>
+        let month: Driver<String>
+        let day: Driver<String>
+        let stateText: Driver<String>
+        let isEnabled: Driver<Bool>
+        let next: ControlEvent<Void>
+    }
+    
+    func transform(input: Input) -> Output {
+        let year = input.birthday.map { self.transformDateComponents(date: $0) }.map { "\($0.year!)년" }.asDriver(onErrorJustReturn: "")
+        let month = input.birthday.map { self.transformDateComponents(date: $0) }.map { "\($0.month!)월" }.asDriver(onErrorJustReturn: "")
+        let day = input.birthday.map { self.transformDateComponents(date: $0) }.map { "\($0.day!)일" }.asDriver(onErrorJustReturn: "")
+        
+        let stateText = input.birthday
+            .map { self.transformAgeComponents(date: $0) }
+            .map { value in
+                if let age = value.year, age > 17 {
+                    "만 \(age)세로 가입 가능한 나이입니다"
+                } else {
+                    "만 17세 이상만 가입 가능합니다"
+                }
+            }
+            .asDriver(onErrorJustReturn: "")
+        
+        let isEnabled = input.birthday
+            .map { self.transformAgeComponents(date: $0) }
+            .map { value in
+                if let age = value.year, age > 17 {
+                    true
+                } else {
+                    false
+                }
+            }
+            .asDriver(onErrorJustReturn: false)
+        
+        return Output(year: year, month: month, day: day, stateText: stateText, isEnabled: isEnabled, next: input.next)
+    }
+    
+    func transformDateComponents(date: Date) -> DateComponents {
+        Calendar.current.dateComponents([.year, .month, .day], from: date)
+    }
+    
+    func transformAgeComponents(date: Date) -> DateComponents {
+        Calendar.current.dateComponents([.year], from: date, to: Date())
+    }
 }

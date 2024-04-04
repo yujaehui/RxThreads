@@ -30,18 +30,31 @@ class SearchViewController: UIViewController {
     }
     
     func bind() {
-        viewModel.items
-            .bind(to: tableView.rx.items(cellIdentifier: "Cell", cellType: SearchTableViewCell.self)) { (row, element, cell) in
-                cell.sampleImageView.backgroundColor = .systemGray
-                cell.sampleLabel.text = "TEST \(element)"
-                cell.sampleButton.rx.tap
-                    .bind(with: self) { owner, _ in
-                        owner.navigationController?.pushViewController(SignInViewController(), animated: true)
-                    }.disposed(by: cell.disposeBag)
-            }.disposed(by: disposeBag)
+//        viewModel.items
+//            .bind(to: tableView.rx.items(cellIdentifier: "Cell", cellType: SearchTableViewCell.self)) { (row, element, cell) in
+//                cell.sampleImageView.backgroundColor = .systemGray
+//                cell.sampleLabel.text = "TEST \(element)"
+//                cell.sampleButton.rx.tap
+//                    .bind(with: self) { owner, _ in
+//                        owner.navigationController?.pushViewController(SignInViewController(), animated: true)
+//                    }.disposed(by: cell.disposeBag)
+//            }.disposed(by: disposeBag)
+//        
+//        searchBar.rx.text.orEmpty.bind(to: viewModel.searchText).disposed(by: disposeBag)
+//        searchBar.rx.searchButtonClicked.bind(to: viewModel.searchButtonClikced).disposed(by: disposeBag)
         
-        searchBar.rx.text.orEmpty.bind(to: viewModel.inputSearchText).disposed(by: disposeBag)
-        searchBar.rx.searchButtonClicked.bind(to: viewModel.inputSearchButtonClicked).disposed(by: disposeBag)
+        let searchText = searchBar.rx.text.orEmpty
+        let searchButtonClicked = searchBar.rx.searchButtonClicked
+        let input = SearchViewModel.Input(searchText: searchText, searchButtonClikced: searchButtonClicked)
+        
+        let output = viewModel.transform(input: input)
+        output.searchList.drive(tableView.rx.items(cellIdentifier: "Cell", cellType: SearchTableViewCell.self)) { (row, element, cell) in
+            cell.sampleImageView.backgroundColor = .systemGray
+            cell.sampleLabel.text = "TEST \(element)"
+            cell.sampleButton.rx.tap.bind(with: self) { owner, _ in
+                owner.navigationController?.pushViewController(SignInViewController(), animated: true)
+            }.disposed(by: cell.disposeBag)
+        }.disposed(by: disposeBag)
 
 //        Observable.zip(tableView.rx.itemSelected, tableView.rx.modelSelected(String.self))
 //            .bind(with: self) { owner, value in

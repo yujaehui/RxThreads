@@ -10,30 +10,43 @@ import RxSwift
 import RxCocoa
 
 class SearchViewModel {
-    
     var data = ["a", "b", "c", "d", "aa", "bb", "cc", "dd", "abc", "abcd"]
-    lazy var items = BehaviorSubject(value: data)
     
-    let inputSearchText = PublishSubject<String>()
-    let inputSearchButtonClicked = PublishSubject<Void>()
+    struct Input {
+        let searchText: ControlProperty<String>
+        let searchButtonClikced: ControlEvent<Void>
+    }
     
-    let disposeBag = DisposeBag()
+    struct Output {
+        let searchList: Driver<[String]>
+    }
     
-    init() {
-        inputSearchText
+    func transform(input: Input) -> Output {
+        let searchText = input.searchText
             .debounce(.seconds(1), scheduler: MainScheduler.instance)
             .distinctUntilChanged()
-            .subscribe(with: self) { owner, value in
-                let result = value.isEmpty ? owner.data : owner.data.filter { $0.contains(value) }
-                owner.items.onNext(result)
-            }.disposed(by: disposeBag)
+            .map { value in
+                if value.isEmpty {
+                    self.data
+                } else {
+                    self.data.filter { $0.contains(value) }
+                }
+            }
         
-        inputSearchButtonClicked
-            .withLatestFrom(inputSearchText)
+        let searchButtonClikced = input.searchButtonClikced
+            .withLatestFrom(input.searchText)
             .distinctUntilChanged()
-            .subscribe(with: self) { owner, value in
-                let result = value.isEmpty ? owner.data : owner.data.filter { $0.contains(value) }
-                owner.items.onNext(result)
-            }.disposed(by: disposeBag)
+            .map { value in
+                if value.isEmpty {
+                    self.data
+                } else {
+                    self.data.filter { $0.contains(value) }
+                }
+            }
+            
+        let searchList = Observable.merge(searchText, searchButtonClikced).asDriver(onErrorJustReturn: self.data)
+                
+        return Output(searchList: searchList)
+        
     }
 }

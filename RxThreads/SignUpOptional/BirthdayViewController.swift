@@ -21,7 +21,7 @@ class BirthdayViewController: UIViewController {
         return picker
     }()
     
-    let infoLabel: UILabel = {
+    let birthdayStateLabel: UILabel = {
        let label = UILabel()
         label.textColor = Color.black
         label.text = "만 17세 이상만 가입 가능합니다."
@@ -68,12 +68,6 @@ class BirthdayViewController: UIViewController {
   
     let nextButton = PointButton(title: "가입하기")
     
-//    let year = PublishSubject<Int>()
-//    let month = PublishSubject<Int>()
-//    let day = PublishSubject<Int>()
-//    
-//    let info = PublishSubject<String>()
-    
     let disposeBag = DisposeBag()
     
     let viewModel = BirthdayViewModel()
@@ -86,18 +80,18 @@ class BirthdayViewController: UIViewController {
     }
     
     func configureLayout() {
-        view.addSubview(infoLabel)
+        view.addSubview(birthdayStateLabel)
         view.addSubview(containerStackView)
         view.addSubview(birthDayPicker)
         view.addSubview(nextButton)
  
-        infoLabel.snp.makeConstraints {
+        birthdayStateLabel.snp.makeConstraints {
             $0.top.equalTo(view.safeAreaLayoutGuide).offset(150)
             $0.centerX.equalToSuperview()
         }
         
         containerStackView.snp.makeConstraints {
-            $0.top.equalTo(infoLabel.snp.bottom).offset(30)
+            $0.top.equalTo(birthdayStateLabel.snp.bottom).offset(30)
             $0.centerX.equalToSuperview()
         }
         
@@ -118,18 +112,23 @@ class BirthdayViewController: UIViewController {
     }
     
     func bind() {
-        viewModel.outputYear.asDriver(onErrorJustReturn: "").drive(yearLabel.rx.text).disposed(by: disposeBag)
-        viewModel.outputMonth.asDriver(onErrorJustReturn: "").drive(monthLabel.rx.text).disposed(by: disposeBag)
-        viewModel.outputDay.asDriver(onErrorJustReturn: "").drive(dayLabel.rx.text).disposed(by: disposeBag)
-        viewModel.outputValidationText.asDriver(onErrorJustReturn: "").drive(infoLabel.rx.text).disposed(by: disposeBag)
-        viewModel.outputValidation.asDriver(onErrorJustReturn: false).drive(with: self) { owner, value in
-                owner.nextButton.isEnabled = value
-                owner.nextButton.backgroundColor = value ? .systemBlue : .systemGray
-            }.disposed(by: disposeBag)
+        let birthday = birthDayPicker.rx.date
+        let next = nextButton.rx.tap
+        let input = BirthdayViewModel.Input(birthday: birthday, next: next)
         
-        birthDayPicker.rx.date.bind(to: viewModel.inputDate).disposed(by: disposeBag)
+        let output = viewModel.transform(input: input)
         
-        nextButton.rx.tap.bind(with: self) { owner, _ in
+        output.year.drive(yearLabel.rx.text).disposed(by: disposeBag)
+        output.month.drive(monthLabel.rx.text).disposed(by: disposeBag)
+        output.day.drive(dayLabel.rx.text).disposed(by: disposeBag)
+        output.stateText.drive(birthdayStateLabel.rx.text).disposed(by: disposeBag)
+        
+        output.isEnabled.drive(with: self) { owner, value in
+            owner.nextButton.isEnabled = value
+            owner.nextButton.backgroundColor = value ? .systemBlue : .systemGray
+        }.disposed(by: disposeBag)
+        
+        output.next.bind(with: self) { owner, _ in
             print("가입완료")
         }.disposed(by: disposeBag)
     }
